@@ -55,6 +55,9 @@ import com.axelor.exception.AxelorException;
 import com.axelor.exception.db.repo.TraceBackRepository;
 import com.axelor.i18n.I18n;
 import com.axelor.inject.Beans;
+import com.axelor.meta.db.MetaSelect;
+import com.axelor.meta.db.MetaSelectItem;
+import com.axelor.meta.db.repo.MetaSelectRepository;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
@@ -1305,5 +1308,56 @@ public class StockMoveServiceImpl implements StockMoveService {
         }
       }
     }
+  }
+
+  public int getAvailableStatusSelect(StockMove stockMove) {
+
+    int availableStatusSelect = 0;
+    int available = 0, availableForProduct = 0, missing = 0;
+    for (StockMoveLine stockMoveLine : stockMove.getStockMoveLineList()) {
+      Beans.get(StockMoveLineService.class)
+          .updateAvailableQty(stockMoveLine, stockMove.getFromStockLocation());
+      Product product = stockMoveLine.getProduct();
+      if (stockMoveLine.getAvailableQty().compareTo(stockMoveLine.getRealQty()) >= 0
+          || product != null && !product.getStockManaged()) {
+        available++;
+      } else if (stockMoveLine.getAvailableQtyForProduct().compareTo(stockMoveLine.getRealQty())
+          >= 0) {
+        availableForProduct++;
+      } else if (stockMoveLine.getAvailableQty().compareTo(stockMoveLine.getRealQty()) < 0
+          && stockMoveLine.getAvailableQtyForProduct().compareTo(stockMoveLine.getRealQty()) < 0) {
+        missing++;
+      }
+    }
+
+    if ((available > 0 || availableForProduct > 0) && missing == 0) {
+      availableStatusSelect = StockMoveRepository.STATUS_AVAILABLE;
+    } else if ((available > 0 || availableForProduct > 0) && missing > 0) {
+      availableStatusSelect = StockMoveRepository.STATUS_PARTIALLY_AVAILABLE;
+    } else if (available == 0 && availableForProduct == 0 && missing > 0) {
+      availableStatusSelect = StockMoveRepository.STATUS_UNAVAILABLE;
+    }
+    return availableStatusSelect;
+  }
+
+  @Override
+  public String getAvailableStatusSelect(String stockMoveId, String locale) {
+
+    String availableStatus = "";
+
+    StockMove stockMove = stockMoveRepo.find(Long.valueOf(stockMoveId));
+    int availableStatusSelect = this.getAvailableStatusSelect(stockMove);
+
+    MetaSelect metaSelect =
+        Beans.get(MetaSelectRepository.class)
+            .findByName("stock.stock.move.available.status.select");
+
+    for (MetaSelectItem item : metaSelect.getItems()) {
+      if (item.getValue().equals(Integer.toString(availableStatusSelect))) {
+        availableStatus = item.getTitle();
+      }
+    }
+
+    return availableStatus;
   }
 }

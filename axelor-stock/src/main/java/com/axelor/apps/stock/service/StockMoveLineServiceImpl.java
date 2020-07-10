@@ -23,6 +23,7 @@ import com.axelor.apps.base.db.Country;
 import com.axelor.apps.base.db.Product;
 import com.axelor.apps.base.db.Unit;
 import com.axelor.apps.base.db.repo.ProductRepository;
+import com.axelor.apps.base.service.ObjectDataCommonService;
 import com.axelor.apps.base.service.ShippingCoefService;
 import com.axelor.apps.base.service.UnitConversionService;
 import com.axelor.apps.base.service.app.AppBaseService;
@@ -60,6 +61,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1185,7 +1187,12 @@ public class StockMoveLineServiceImpl implements StockMoveLineService {
         } else {
           missingQty = availableQty.subtract(realQty);
         }
-        stockMoveLine.setAvailableStatus(I18n.get("Missing") + " (" + missingQty + ")");
+        stockMoveLine.setAvailableStatus(
+            I18n.get("Missing")
+                + " ("
+                + missingQty.setScale(
+                    appBaseService.getNbDecimalDigitForQty(), RoundingMode.HALF_EVEN)
+                + ")");
         stockMoveLine.setAvailableStatusSelect(StockMoveLineRepository.STATUS_MISSING);
       }
     }
@@ -1212,5 +1219,27 @@ public class StockMoveLineServiceImpl implements StockMoveLineService {
 
     stockLocationLineOpt.ifPresent(
         stockLocationLine -> stockMoveLine.setWapPrice(stockLocationLine.getAvgPrice()));
+  }
+
+  @Override
+  public String getAvailableStatus(String stockMoveLineId, String locale) {
+    StockMoveLine stockMoveLine = stockMoveLineRepository.find(Long.valueOf(stockMoveLineId));
+    this.setAvailableStatus(stockMoveLine);
+
+    String availableStatus = stockMoveLine.getAvailableStatus();
+    ResourceBundle bundle = ObjectDataCommonService.getResourceBundle(locale);
+
+    if (availableStatus.startsWith(I18n.get("Available"))) {
+      availableStatus =
+          availableStatus.replace(I18n.get("Available"), bundle.getString("Available"));
+    } else if (availableStatus.startsWith(I18n.get("Av. for product"))) {
+      availableStatus =
+          availableStatus.replace(I18n.get("Av. for product"), bundle.getString("Av. for product"));
+    } else if (availableStatus.startsWith(I18n.get("Missing"))) {
+      availableStatus = availableStatus.replace(I18n.get("Missing"), bundle.getString("Missing"));
+    }
+    availableStatus = bundle.getString(availableStatus);
+
+    return availableStatus + "," + Integer.toString(stockMoveLine.getAvailableStatusSelect());
   }
 }

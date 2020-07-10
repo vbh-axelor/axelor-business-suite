@@ -28,6 +28,7 @@ import com.axelor.apps.stock.db.StockLocation;
 import com.axelor.apps.stock.db.StockMove;
 import com.axelor.apps.stock.db.StockMoveLine;
 import com.axelor.exception.AxelorException;
+import com.axelor.inject.Beans;
 import com.google.inject.persist.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -229,4 +230,12 @@ public interface StockMoveService {
   void updateStocks(StockMove stockMove) throws AxelorException;
 
   void updateProductNetMass(StockMove stockMove) throws AxelorException;
+
+  public int getAvailableStatusSelect(StockMove stockMove);
+
+  static StockMoveService getInstance() {
+    return Beans.get(StockMoveService.class);
+  }
+
+  public String getAvailableStatusSelect(String stockMoveId, String locale);
 }

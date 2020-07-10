@@ -28,6 +28,7 @@ import com.axelor.apps.stock.db.StockMoveLine;
 import com.axelor.apps.stock.db.TrackingNumber;
 import com.axelor.apps.stock.db.TrackingNumberConfiguration;
 import com.axelor.exception.AxelorException;
+import com.axelor.inject.Beans;
 import com.google.inject.persist.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -267,4 +268,10 @@ public interface StockMoveLineService {
    * @param stockMoveLine a stock move line being realized.
    */
   public void fillRealizeWapPrice(StockMoveLine stockMoveLine);
+
+  static StockMoveLineService getInstance() {
+    return Beans.get(StockMoveLineService.class);
+  }
+
+  public String getAvailableStatus(String stockMoveLineId, String locale);
 }

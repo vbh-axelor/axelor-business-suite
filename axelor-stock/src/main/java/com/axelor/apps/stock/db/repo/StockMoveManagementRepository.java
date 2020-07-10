@@ -17,12 +17,10 @@
  */
 package com.axelor.apps.stock.db.repo;
 
-import com.axelor.apps.base.db.Product;
 import com.axelor.apps.base.service.administration.SequenceService;
 import com.axelor.apps.stock.db.StockMove;
-import com.axelor.apps.stock.db.StockMoveLine;
 import com.axelor.apps.stock.exception.IExceptionMessage;
-import com.axelor.apps.stock.service.StockMoveLineService;
+import com.axelor.apps.stock.service.StockMoveService;
 import com.axelor.apps.stock.service.StockMoveToolService;
 import com.axelor.i18n.I18n;
 import com.axelor.inject.Beans;
@@ -100,30 +98,9 @@ public class StockMoveManagementRepository extends StockMoveRepository {
       return super.populate(json, context);
     }
 
-    int available = 0, availableForProduct = 0, missing = 0;
-    for (StockMoveLine stockMoveLine : stockMove.getStockMoveLineList()) {
-      Beans.get(StockMoveLineService.class)
-          .updateAvailableQty(stockMoveLine, stockMove.getFromStockLocation());
-      Product product = stockMoveLine.getProduct();
-      if (stockMoveLine.getAvailableQty().compareTo(stockMoveLine.getRealQty()) >= 0
-          || product != null && !product.getStockManaged()) {
-        available++;
-      } else if (stockMoveLine.getAvailableQtyForProduct().compareTo(stockMoveLine.getRealQty())
-          >= 0) {
-        availableForProduct++;
-      } else if (stockMoveLine.getAvailableQty().compareTo(stockMoveLine.getRealQty()) < 0
-          && stockMoveLine.getAvailableQtyForProduct().compareTo(stockMoveLine.getRealQty()) < 0) {
-        missing++;
-      }
-    }
-
-    if ((available > 0 || availableForProduct > 0) && missing == 0) {
-      json.put("availableStatusSelect", StockMoveRepository.STATUS_AVAILABLE);
-    } else if ((available > 0 || availableForProduct > 0) && missing > 0) {
-      json.put("availableStatusSelect", StockMoveRepository.STATUS_PARTIALLY_AVAILABLE);
-    } else if (available == 0 && availableForProduct == 0 && missing > 0) {
-      json.put("availableStatusSelect", StockMoveRepository.STATUS_UNAVAILABLE);
-    }
+    json.put(
+        "availableStatusSelect",
+        Beans.get(StockMoveService.class).getAvailableStatusSelect(stockMove));
     return super.populate(json, context);
   }
 }
